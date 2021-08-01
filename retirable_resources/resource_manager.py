@@ -1,3 +1,12 @@
+from typing import cast, Literal, Optional, Any, Generator, Union, Iterable
+
+from google.auth.credentials import Credentials
+from google.cloud.exceptions import Conflict
+from google.cloud.firestore_v1.base_query import BaseQuery
+from google.cloud.firestore_v1.field_path import (
+    get_field_path,
+    FieldPath,
+)
 from google.cloud.firestore_v1 import (
     Client,
     DocumentReference,
@@ -7,15 +16,6 @@ from google.cloud.firestore_v1 import (
     transactional,
     DELETE_FIELD,
 )
-from google.cloud.firestore_v1.base_query import BaseQuery
-from google.cloud.firestore_v1.field_path import (
-    parse_field_path,
-    get_field_path,
-    FieldPath,
-)
-from google.auth.credentials import Credentials
-from typing import cast, Literal, Optional, Any, Generator, Union, Iterable
-from google.cloud.exceptions import Conflict
 
 
 class RetirableResourcesException(Exception):
