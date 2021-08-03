@@ -18,10 +18,6 @@ from google.cloud.firestore_v1 import (
 )
 
 
-class RetirableResourcesException(Exception):
-    pass
-
-
 class ResourceDoesNotExist(Exception):
     pass
 
@@ -41,11 +37,11 @@ class RetirableResources:
         """Set the owners to `owners`"
 
         Update all active resources with the new owners list, preserving
-        values for owners that did not change.
+        tags for owners that did not change.
         """
 
         @transactional
-        def update(transaction: Transaction) -> None:
+        def t_update(transaction: Transaction) -> None:
             previous_owners = self._owners(transaction=transaction)
             new_owners = set(owners)
             update_spec = {
@@ -58,21 +54,23 @@ class RetirableResources:
             for doc in active_resources:
                 transaction.update(doc.reference, update_spec)
 
-        update(self._client.transaction())
+        t_update(self._client.transaction())
 
-    def take(self, owner: str, value: str) -> Optional[str]:
-        """"""
+    def take(self, owner: str, *, tag: str) -> Optional[str]:
+        """Take an additional free resource for the owner"""
 
         @transactional
-        def _take(transaction: Transaction) -> Optional[str]:
+        def t_take(transaction: Transaction) -> Optional[str]:
             resource = self._find_free_resource_for(owner, transaction=transaction)
             if resource is None:
                 return None
             else:
-                self._set_value(resource, owner, value, transaction=transaction)
+                self._set_tag(
+                    resource, owner=owner, tag=tag, transaction=transaction
+                )
                 return resource
 
-        return _take(self._client.transaction())
+        return t_take(self._client.transaction())
 
     def dispose_all_resources(self) -> None:
         """Dispose all resources"""
@@ -161,23 +159,25 @@ class RetirableResources:
             raise ResourceDoesNotExist(resource)
         transaction.set(self._resource_docref(resource), {self._active_field: False})
 
-    def _set_value(
+    def _set_tag(
         self,
         resource: str,
+        /,
+        *,
         owner: str,
-        value: str,
+        tag: str,
         transaction: Optional[Transaction] = None,
     ) -> None:
         """"""
-        if value == self._free_marker or value == self._retired_marker:
-            raise ValueError(value)
+        if tag == self._free_marker or tag == self._retired_marker:
+            raise ValueError(tag)
         updatee = transaction if transaction else DocumentReference
         updatee.update(
-            self._resource_docref(resource), {self._escape_field(owner): value}
+            self._resource_docref(resource), {self._escape_field(owner): tag}
         )
 
     def _active_owners(
-        self, resource: str, transaction: Optional[Transaction] = None
+        self, resource: str, *, transaction: Optional[Transaction] = None
     ) -> set[str]:
         """Active owners are owners of a resource that are not retired"""
         data = self._resource_dict(resource, transaction=transaction)
@@ -210,7 +210,7 @@ class RetirableResources:
         return data
 
     def _resource_doc(
-        self, resource: str, transaction: Optional[Transaction] = None
+        self, resource: str, *, transaction: Optional[Transaction] = None
     ) -> DocumentSnapshot:
         return self._resource_docref(resource).get(transaction=transaction)
 
@@ -220,7 +220,9 @@ class RetirableResources:
     def _root_docref(self) -> DocumentReference:
         return self._client.document(*self._root_doc_path)
 
-    def _root_dict(self, transaction: Optional[Transaction] = None) -> dict[str, Any]:
+    def _root_dict(
+        self, *, transaction: Optional[Transaction] = None
+    ) -> dict[str, Any]:
         return self._root_docref().get(transaction=transaction).to_dict() or {}
 
     def _active_resources_query(self) -> BaseQuery:
@@ -234,7 +236,7 @@ class RetirableResources:
     ) -> Iterable[DocumentSnapshot]:
         return self._active_resources_query().get(transaction=transaction)
 
-    def _owners(self, transaction: Optional[Transaction] = None) -> set[str]:
+    def _owners(self, *, transaction: Optional[Transaction] = None) -> set[str]:
         return set(self._root_dict(transaction=transaction).get("owners", set()))
 
     def _new_resource_data(self) -> dict[str, Any]:
