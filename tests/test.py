@@ -46,6 +46,7 @@ class TestInitialize(unittest.TestCase):
         r = RetirableResources(("foo", "bar"), client=client)
         self.assertEqual(r.root_path, ("foo", "bar"))
 
+# TODO: check updating data on nonexistent resource
 
 class Test(RetirableResourcesTest):
     def test_set_owners(self):
@@ -55,6 +56,11 @@ class Test(RetirableResourcesTest):
         self.assertListEqual(r.list_owners(), ["bob"])
         r.set_owners(["bob", "mary"])
         self.assertListEqual(r.list_owners(), ["bob", "mary"])
+
+    def test_update_data_on_nonexistent_resource(self):
+        r = self.r
+        with self.assertRaises(ResourceDoesNotExist):
+            r.update_data('resource', 'bob', SetValue('foo', 'bar'))
 
     def test_data(self):
         r = self.r

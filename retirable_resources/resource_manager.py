@@ -12,7 +12,7 @@ from typing import (
 
 from datetime import datetime
 
-from google.cloud.exceptions import Conflict
+from google.cloud.exceptions import Conflict, NotFound
 from google.cloud.firestore_v1.base_query import BaseQuery
 from google.cloud.firestore_v1.transforms import Sentinel, ArrayUnion, ArrayRemove
 from google.cloud.firestore_v1.field_path import (
@@ -173,7 +173,6 @@ class RetirableResources:
 
         return t_take(self._client.transaction())
 
-
     def status(self, resource: str, owner: str) -> Literal["owned", "free", "retired"]:
         """Return the status of the resource as owned by `owner`
 
@@ -283,15 +282,20 @@ class RetirableResources:
         for command in update_commands:
             command._update(updates)
 
-        self._resource_docref(resource).update(
-            {
-                **{
-                    FieldPath(owner, "data", key).to_api_repr(): value
-                    for key, value in updates.items()
-                },
-                FieldPath(owner, "modified").to_api_repr(): SERVER_TIMESTAMP,
-            }
-        )
+        docref = self._resource_docref(resource)
+
+        try:
+            docref.update(
+                {
+                    **{
+                        FieldPath(owner, "data", key).to_api_repr(): value
+                        for key, value in updates.items()
+                    },
+                    FieldPath(owner, "modified").to_api_repr(): SERVER_TIMESTAMP,
+                }
+            )
+        except NotFound:
+            raise ResourceDoesNotExist(resource)
 
     def list_allocation(self, owner: str, tag: str) -> set[str]:
         """Returns set of resources allocated to the owner and tag"""
@@ -333,27 +337,26 @@ class RetirableResources:
         for resource in self._resources_by_state(owner, _owned_marker):
             self.free(resource, owner)
 
-
-    def free_allocation_count(self, owner:str) -> int:
+    def free_allocation_count(self, owner: str) -> int:
         """How many resources are available to become allocated for owner
-        
+
         Caution: Because Firestore has no `count` operation, this operation may
         be unexpectedly expensive.
         """
         return len(self._resources_by_state(owner, _free_marker))
 
-    def when_modified(self, resource:str, owner:str) -> datetime:
+    def when_modified(self, resource: str, owner: str) -> datetime:
         owner_dict = self._owner_data_container(resource, owner)
-        return owner_dict['modified']
+        return owner_dict["modified"]
 
     @staticmethod
-    def _doc_owner_dict(doc:DocumentSnapshot, owner:str) -> datetime:
+    def _doc_owner_dict(doc: DocumentSnapshot, owner: str) -> datetime:
         owner_dict = doc.to_dict().get(owner)
         if owner_dict is None:
-            raise Exception('invalid owner_dict for doc', doc.id)
+            raise Exception("invalid owner_dict for doc", doc.id)
         return owner_dict
 
-    def _owner_data_container(self, resource:str, owner:str) -> OwnerDataContainer:
+    def _owner_data_container(self, resource: str, owner: str) -> OwnerDataContainer:
         owners_dict = self._resource_owners_dict(resource)
         if owners_dict is None:
             raise ResourceDoesNotExist(resource)
@@ -362,7 +365,7 @@ class RetirableResources:
             raise OwnerDoesNotExist(resource, owner)
         return owner_dict
 
-    def _resources_by_state(self, owner:str, state:str) -> set[str]:
+    def _resources_by_state(self, owner: str, state: str) -> set[str]:
         docs = (
             self._resources_collection()
             .where(
