@@ -1,12 +1,12 @@
 from contextlib import contextmanager
 from datetime import datetime
 from threading import Lock
-from typing import Optional, Any, Generator
+from typing import Optional, Any, Generator, ContextManager
 
 from google.cloud.firestore_v1 import DocumentSnapshot
 from google.cloud.firestore_v1.watch import DocumentChange
 
-from .resource_manager import RetirableResources
+from .resource_manager import RetirableResourceManager as BaseRetirableResourceManager
 
 
 class ResourceWatcherData:
@@ -38,7 +38,7 @@ class ResourceWatcherData:
         if self._data is not None or self._expired:
             return
         for doc in snapshots:
-            owner_dict = RetirableResources._doc_owner_dict(doc, self._owner)
+            owner_dict = BaseRetirableResourceManager._doc_owner_dict(doc, self._owner)
             modified = owner_dict["modified"]
             if modified > self._server_timestamp:
                 self._data = owner_dict["data"]
@@ -46,7 +46,7 @@ class ResourceWatcherData:
 
 
 class ResourceWatcher:
-    def __init__(self, manager: RetirableResources, resource: str, owner: str):
+    def __init__(self, manager: BaseRetirableResourceManager, resource: str, owner: str):
         self._manager = manager
         self._resource = resource
         self._owner = owner
@@ -70,3 +70,12 @@ class ResourceWatcher:
         finally:
             watch.unsubscribe()
             watch.close()
+
+class RetirableResourceManager(BaseRetirableResourceManager):
+    def watch(
+        self, resource: str, owner: str, timeout_seconds: float
+    ) -> ContextManager[ResourceWatcherData]:
+        return ResourceWatcher(self, resource=resource, owner=owner).watch(
+            timeout_seconds=timeout_seconds
+        )
+

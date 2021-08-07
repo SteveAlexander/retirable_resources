@@ -1,53 +1,53 @@
 import unittest
 
 from retirable_resources import (
-    RetirableResources,
+    RetirableResourceManager,
     SetValue,
     AddToList,
     ResourceDoesNotExist,
     OwnerDoesNotExist,
-    OwnerView,
+    ResourceOwnerView,
     ResourceWatcher,
 )
 
-from .fixtures import RetirableResourcesTest
+from .fixtures import RetirableResourceManagerTest
 
 
 class TestInitialize(unittest.TestCase):
     def test_init_with_empty_path(self):
         client = object()
         with self.assertRaises(ValueError):
-            r = RetirableResources("", client=client)
+            r = RetirableResourceManager("", client=client)
         with self.assertRaises(ValueError):
-            r = RetirableResources([], client=client)
+            r = RetirableResourceManager([], client=client)
         with self.assertRaises(ValueError):
-            r = RetirableResources(tuple(), client=client)
+            r = RetirableResourceManager(tuple(), client=client)
 
     def test_init_with_incorrect_type_path(self):
         client = object()
         with self.assertRaises(TypeError):
-            r = RetirableResources(object(), client=client)
+            r = RetirableResourceManager(object(), client=client)
 
     def test_init_fails_with_odd_doc_path(self):
         client = object()
         with self.assertRaises(ValueError):
-            r = RetirableResources(["foo"], client=client)
+            r = RetirableResourceManager(["foo"], client=client)
         with self.assertRaises(ValueError):
-            r = RetirableResources(("foo",), client=client)
+            r = RetirableResourceManager(("foo",), client=client)
         with self.assertRaises(ValueError):
-            r = RetirableResources("foo", client=client)
+            r = RetirableResourceManager("foo", client=client)
 
     def test_init_with_even_doc_path(self):
         client = object()
-        r = RetirableResources("foo/bar", client=client)
+        r = RetirableResourceManager("foo/bar", client=client)
         self.assertEqual(r.root_path, ("foo", "bar"))
-        r = RetirableResources(["foo", "bar"], client=client)
+        r = RetirableResourceManager(["foo", "bar"], client=client)
         self.assertEqual(r.root_path, ("foo", "bar"))
-        r = RetirableResources(("foo", "bar"), client=client)
+        r = RetirableResourceManager(("foo", "bar"), client=client)
         self.assertEqual(r.root_path, ("foo", "bar"))
 
 
-class Test(RetirableResourcesTest):
+class Test(RetirableResourceManagerTest):
     def test_set_owners(self):
         r = self.r
         self.assertListEqual(r.list_owners(), [])
@@ -265,7 +265,7 @@ class Test(RetirableResourcesTest):
         r = self.r
         r.set_owners(["bob"])
         r.add_resource("resource")
-        ov = OwnerView("bob", r)
+        ov = ResourceOwnerView("bob", r)
         ov.update_data("resource", SetValue("foo", 123))
         self.assertEqual(r.get_data("resource", "bob"), {"foo": 123})
         self.assertEqual(ov.get_data("resource"), {"foo": 123})

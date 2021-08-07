@@ -5,7 +5,7 @@ import warnings
 
 from google.cloud import firestore
 
-from retirable_resources import RetirableResources
+from retirable_resources import RetirableResourceManager
 
 firestore_project = "foo"
 firestore_host = "localhost"
@@ -51,11 +51,11 @@ class FirestoreEmulatorTest:
         self.__restore_environ()
 
 
-class RetirableResourcesTest(FirestoreEmulatorTest, unittest.TestCase):
+class RetirableResourceManagerTest(FirestoreEmulatorTest, unittest.TestCase):
     def setUp(self):
         super().setUp()
         self.client = firestore.Client()
-        self.r = RetirableResources('foo/bar', client = self.client)
+        self.r = RetirableResourceManager('foo/bar', client = self.client)
 
     def tearDown(self):
         self.client.close()

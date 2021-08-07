@@ -1,24 +1,24 @@
 from .version import __version__
 from .resource_manager import (
-    RetirableResources,
     ResourceDoesNotExist,
     RetirableResourceException,
     ResourceNotAllocated,
     OwnerDoesNotExist,
     AddToList,
     SetValue,
-    OwnerView,
 )
-from .resource_watcher import ResourceWatcher
+from .owner_view import ResourceOwnerView
+from .resource_watcher import ResourceWatcher, RetirableResourceManager
+
 
 __all__ = [
-    "RetirableResources",
+    "RetirableResourceManager",
     "ResourceDoesNotExist",
     "RetirableResourceException",
     "ResourceNotAllocated",
     "OwnerDoesNotExist",
     "AddToList",
     "SetValue",
-    "Ownerview",
-    "ResourceWatcher"
+    "ResourceOwnerview",
+    "ResourceWatcher",
 ]

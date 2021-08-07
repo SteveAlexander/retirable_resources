@@ -46,9 +46,7 @@ OwnerDataContainer = dict[str, Any]
 class OwnerDataContainer(TypedDict, total=True):
     state: Union[_free_marker_literal, _owned_marker_literal, _retired_marker_literal]
     data: dict[str, Any]
-    modified: Union[
-        Sentinel, Any
-    ]  # actually SERVER_TIMESTAMP — what is that when it comes back?
+    modified: Union[Sentinel, datetime]
 
 
 class OwnedDataContainer(OwnerDataContainer):
@@ -97,7 +95,7 @@ class AddToList:
         data[self._key] = ArrayUnion(self._values)
 
 
-class RetirableResources:
+class RetirableResourceManager:
     def __init__(
         self, root_doc_path: Union[str, tuple[str], list[str]], *, client: Client
     ):
@@ -535,27 +533,3 @@ class RetirableResources:
             "data": {},
             "modified": SERVER_TIMESTAMP,
         }
-
-
-class OwnerView:
-    def __init__(self, owner: str, retirable_resources: RetirableResources):
-        self._owner = owner
-        self._r = retirable_resources
-
-    def take(self, tag: str) -> Optional[str]:
-        return self._r.take(self._owner, tag=tag)
-
-    def status(self, resource: str) -> Literal["owned", "free", "retired"]:
-        return self._r.status(resource, owner=self._owner)
-
-    def retire(self, resource: str) -> Literal["resource retired", "resource active"]:
-        return self._r.retire(resource, owner=self._owner)
-
-    def free(self, resource: str) -> None:
-        self._r.free(resource, owner=self._owner)
-
-    def get_data(self, resource: str) -> dict:
-        return self._r.get_data(resource, owner=self._owner)
-
-    def update_data(self, resource: str, *update_commands: UpdateCommand) -> None:
-        self._r.update_data(resource, self._owner, *update_commands)
