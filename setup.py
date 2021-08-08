@@ -23,7 +23,7 @@ setup(
     author="Steve Alexander",
     author_email="steve@stevea.com",
     url="https://github.com/SteveAlexander/retirable_resources",
-    download_url="https://github.com/SteveAlexander/retirable_resources/archive/refs/tags/0.1.6.tar.gz",
+    download_url="https://github.com/SteveAlexander/retirable_resources/archive/refs/tags/0.1.7.tar.gz",
     license="MIT",
     packages=["retirable_resources"],
     install_requires=[
