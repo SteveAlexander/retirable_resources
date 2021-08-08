@@ -85,6 +85,9 @@ class SetValue:
     def _update(self, data: dict[str, Any]) -> None:
         data[self._key] = self._value
 
+    def __str__(self):
+        return f"SetValue({self._key}, {self._value}"
+
 
 class AddToList:
     def __init__(self, key: str, *values: Any):
@@ -94,6 +97,8 @@ class AddToList:
     def _update(self, data: dict[str, Any]) -> None:
         data[self._key] = ArrayUnion(self._values)
 
+    def __str__(self):
+        return f"AddToList({self._key}, {', '.join(self._values)}"
 
 class RetirableResourceManager:
     def __init__(
