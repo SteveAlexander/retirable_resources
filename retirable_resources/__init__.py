@@ -6,6 +6,7 @@ from .resource_manager import (
     OwnerDoesNotExist,
     AddToList,
     SetValue,
+    DeleteValue,
 )
 from .owner_view import ResourceOwnerView
 from .resource_watcher import ResourceWatcher, RetirableResourceManager
@@ -19,6 +20,7 @@ __all__ = [
     "OwnerDoesNotExist",
     "AddToList",
     "SetValue",
+    "DeleteValue",
     "ResourceOwnerview",
     "ResourceWatcher",
 ]

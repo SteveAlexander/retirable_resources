@@ -1,3 +1,4 @@
+from retirable_resources.resource_manager import DeleteValue
 import unittest
 
 from retirable_resources import (
@@ -76,7 +77,21 @@ class Test(RetirableResourceManagerTest):
             bobresource1,
             "bob",
             SetValue("example", "wxyz"),
+            SetValue("something_temporary", "12345"),
             AddToList("log", "apple"),
+        )
+        self.assertDictEqual(
+            r.get_data(bobresource1, owner="bob"),
+            {
+                "example": "wxyz",
+                "something_temporary": "12345",
+                "log": ["apple"],
+            },
+        )
+        r.update_data(
+            bobresource1,
+            "bob",
+            DeleteValue("something_temporary"),
         )
         self.assertDictEqual(
             r.get_data(bobresource1, owner="bob"),

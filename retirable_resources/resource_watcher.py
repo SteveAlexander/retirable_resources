@@ -37,6 +37,7 @@ class ResourceWatcherData:
     ):
         if self._data is not None or self._expired:
             return
+        # print(f'{len(snapshots)} snapshots')
         for doc in snapshots:
             owner_dict = BaseRetirableResourceManager._doc_owner_dict(doc, self._owner)
             modified = owner_dict["modified"]

@@ -77,6 +77,17 @@ class UpdateCommand(Protocol):
         """Update the dict with fields names and updates to add"""
 
 
+class DeleteValue:
+    def __init__(self, key: str):
+        self._key = key
+
+    def _update(self, data: dict[str, Any]) -> None:
+        data[self._key] = DELETE_FIELD
+
+    def __repr__(self):
+        return f"DeleteValue({self._key})"
+
+
 class SetValue:
     def __init__(self, key: str, value: Any):
         self._key = key
@@ -86,7 +97,7 @@ class SetValue:
         data[self._key] = self._value
 
     def __repr__(self):
-        return f"SetValue({self._key}, value: {type(self._value)})"
+        return f"SetValue({self._key}, value: {type(self._value).__name__})"
 
 
 class AddToList:
@@ -98,23 +109,12 @@ class AddToList:
         data[self._key] = ArrayUnion(self._values)
 
     def __repr__(self):
-        return f"AddToList({self._key}) with items {','.join(type(value) for value in self._values)}"
+        values_description = ",".join(type(value).__name__ for value in self._values)
+        return f"AddToList({self._key}) with items {values_description}"
 
 
-class RetirableResourceManager:
-    def __init__(
-        self, root_doc_path: Union[str, tuple[str], list[str]], *, client: Client
-    ):
-        """Initialize retirable resources manager, situated at `root_doc_path`,
-        using the provided Firestore client.
-
-        `root_doc_path` is either a slash-delimited string, or a sequence of path
-        segments, and must refer to a document location, not a collection location,
-        in firestore.
-
-        Raises a ValueError if `root_doc_path` does not have an even number of
-        path elements.
-        """
+class _ResourceManagerBase:
+    def __init__(self, root_doc_path: Union[str, tuple[str], list[str]]):
         if isinstance(root_doc_path, str):
             root_path = root_doc_path.split("/")
         elif isinstance(root_doc_path, (list, tuple)):
@@ -128,11 +128,45 @@ class RetirableResourceManager:
             raise ValueError("root path must be a valid document path", root_path)
 
         self._root_doc_path: tuple[str] = tuple(root_path)
-        self._client = client
 
     @property
     def root_path(self):
         return self._root_doc_path
+
+    @staticmethod
+    def _escape_field(name: str) -> str:
+        return get_field_path((name,))
+
+    def _child_path(self, *parts: str) -> tuple[str]:
+        return FieldPath(*self._root_doc_path + parts).parts
+
+    def _resource_path(self, resource: str) -> tuple[str]:
+        return self._child_path("resources", resource)
+
+    def _new_owner_data(self) -> dict[str, Any]:
+        return {
+            "state": _free_marker,
+            "data": {},
+            "modified": SERVER_TIMESTAMP,
+        }
+
+
+class RetirableResourceManager(_ResourceManagerBase):
+    def __init__(
+        self, root_doc_path: Union[str, tuple[str], list[str]], *, client: Client
+    ):
+        """Initialize retirable resources manager, situated at `root_doc_path`,
+        using the provided Firestore client.
+
+        `root_doc_path` is either a slash-delimited string, or a sequence of path
+        segments, and must refer to a document location, not a collection location,
+        in firestore.
+
+        Raises a ValueError if `root_doc_path` does not have an even number of
+        path elements.
+        """
+        super().__init__(root_doc_path)
+        self._client = client
 
     def list_owners(self) -> list[str]:
         """Returns list of owners"""
@@ -466,16 +500,6 @@ class RetirableResourceManager:
             )
         )
 
-    @staticmethod
-    def _escape_field(name: str) -> str:
-        return get_field_path((name,))
-
-    def _child_path(self, *parts: str) -> tuple[str]:
-        return FieldPath(*self._root_doc_path + parts).parts
-
-    def _resource_path(self, resource: str) -> tuple[str]:
-        return self._child_path("resources", resource)
-
     def _resources_collection(self) -> CollectionReference:
         return self._client.collection(*self._child_path("resources"))
 
@@ -531,11 +555,4 @@ class RetirableResourceManager:
                 FieldPath(k).to_api_repr(): self._new_owner_data()
                 for k in self._owners()
             },
-        }
-
-    def _new_owner_data(self) -> dict[str, Any]:
-        return {
-            "state": _free_marker,
-            "data": {},
-            "modified": SERVER_TIMESTAMP,
         }
