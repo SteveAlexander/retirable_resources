@@ -86,7 +86,7 @@ class SetValue:
         data[self._key] = self._value
 
     def __repr__(self):
-        return f"SetValue({self._key}, {self._value}"
+        return f"SetValue({self._key}, value: {type(self._value)})"
 
 
 class AddToList:
@@ -98,7 +98,8 @@ class AddToList:
         data[self._key] = ArrayUnion(self._values)
 
     def __repr__(self):
-        return f"AddToList({self._key}, {', '.join(self._values)}"
+        return f"AddToList({self._key}) with items {','.join(type(value) for value in self._values)}"
+
 
 class RetirableResourceManager:
     def __init__(
